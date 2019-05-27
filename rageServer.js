@@ -22,6 +22,7 @@ io = io.listen(server);
 var minPlayers = 2;
 var maxPlayers = 9; //must increase card number for more players
 var numberOfRounds = 10;
+var reduceRoundsBy = 2
 
 var allClients = [];
 var players = [];
@@ -741,7 +742,7 @@ function addHandScoreToTotal(){
 }
 
 function finishRound() {
-    currentRound -= 2;
+    currentRound -= reduceRoundsBy;
     if( currentRound > 0) {
         startRound();
     } else {
