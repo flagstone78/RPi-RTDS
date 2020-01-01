@@ -3,6 +3,8 @@
 //TODO: send current board state to new connections
 //subtract remaining tiles
 
+//TODO: deal cards on game restart
+
 var express = require("express");
 var http = require("http");
 var io = require("socket.io");
@@ -52,7 +54,7 @@ var readyTitleColor = "#00ff00";
 var notReadyTitleColor = "#ff0000";
 var spectatorColor = "#444444";
 var notYourTurnColor = "#ffffff";
-var yourTurnColor = "#0000ff";
+//var yourTurnColor = "#0000ff";
 
 
 console.log("Server Started!");
@@ -63,9 +65,14 @@ function defaultUserData(){
 		tiles: [],
 		score: 0,
 		statusColor: notReadyColor,
-		ready: false
+		ready: false,
+		trades:[],
+		bids:[],
+		incomingTrades:[]
 	}
 }
+
+var stolenCard = {message:"You don't own that card!"}
 
 io.sockets.on("connection", function(socket) {
     socket.userData = defaultUserData();
@@ -100,12 +107,18 @@ io.sockets.on("connection", function(socket) {
 		console.log(__line, "oldID:", id);
 		for(var i = 0; i < players.length; i++){
 			if(players[i].id == id){
-				console.log(__line, "found old player!", players[i].userData.username, socket.userData.userName);
+				console.log(__line, "found old player!", players[i].userData.userName, socket.userData.userName);
 				var j = spectators.indexOf(socket);
 				if(j >= 0){spectators.splice(j, 1)};
 				socket.userData = players[i].userData;
 				players[i] = socket;
+				
 				socket.emit('tiles', socket.userData.tiles);
+				
+				if(gameStatus === gameMode.PLAY){
+					io.emit('startGame');
+				}
+				
 			} else {
 				console.log(__line, "new player");
 			}
@@ -123,7 +136,7 @@ io.sockets.on("connection", function(socket) {
 
         if(data.message === "end") {
             console.log(__line,"forced end");
-            gameEnd();
+            actilyGameEnd();
         } else if(data.message === "start") {
             console.log(__line,"forced start");
             gameStart();
@@ -136,7 +149,7 @@ io.sockets.on("connection", function(socket) {
 				}
 			}
 			if( players.length < minPlayers) {
-				gameEnd();
+				actilyGameEnd();
 			} 
 		}
         /*Sending the Acknowledgement back to the client , this will trigger "message" event on the clients side*/
@@ -160,13 +173,311 @@ io.sockets.on("connection", function(socket) {
 				socket.userData.statusColor = notReadyColor;
 				updateBoard(socket, notReadyTitleColor , false);
 			}
-            checkStart();
 			console.log(__line,"" + socket.userData.userName + " is ready: " + ready.ready);
             updateUsers();
+            checkStart();
         }
     });
 	
+	
+	//happens when a player starts a bid  (changes right hand side)
+	socket.on('submitedBidTiles',function(tileNumbers){
+		//makes sure people actily have those cards
+		if (checkCardOwner(socket,tileNumbers)!= undefined){
+			socket.userData.bids.push(tileNumbers);
+			updateUsers();
+		}
+	});
+	
+	//happens when a player answers another players bid (changes left hand side)
+	socket.on('attemptTrade',function(tileNumbers, toPlayerNumber){
+		if((toPlayerNumber >=0)&&(toPlayerNumber<players.length)){
+			if (checkCardOwner(socket,tileNumbers)!= undefined){
+				
+				console.log(__line,"before matrix");
+				printMatrix();
+				
+				//the player number of the socket (person attempting the trade
+				fromPlayerNumber = players.indexOf(socket);
+				if (fromPlayerNumber >= 0){
+					playerTradeMatrix[toPlayerNumber][fromPlayerNumber].push(tileNumbers);
+				}
+				
+				console.log(__line,"after matrix");
+				printMatrix();
+				
+				//console.log(__line,'toPlayerNumber',toPlayerNumber,players[toPlayerNumber].userData.userName);
+				players[toPlayerNumber].emit('tradeMatrix',playerTradeMatrix[toPlayerNumber]);
+				//console.log(__line,playerTradeMatrix);
+			}
+		} else {
+			console.log(__line,"invalid player number for trade!!!!!!!");
+		}
+	});
+	
+	//happens when original player accepts answer (changes both sides)
+	socket.on('tradeReady',function(userNumber,placeNumber){
+		if((userNumber >=0)&&(userNumber < players.length)){
+			
+			console.log(__line,"before matrix");
+			printMatrix();
+			
+			let fromPlayerNumber = players.indexOf(socket);
+			let fromPlayer = socket;
+			let toPlayer = players[userNumber];
+			
+			let trade = playerTradeMatrix[fromPlayerNumber][userNumber].pop(); //TODO: make random?? also might get lost if trade response fails
+			
+			console.log(__line,"after matrix");
+			printMatrix();
+			
+			if(trade != undefined){
+				console.log(__line,'popped trade fromPlayerNumber',trade,fromPlayerNumber);
+				//let length = trade.length - 1;
+				//console.log(__line,'length',length);
+				//console.log(__line,'toPlayer',toPlayer.userData.userName);
+				//console.log(__line,'fromPlayer.userData.bids',fromPlayer.userData.bids);
+				
+				//Get from bid array
+				let tradeResopnseNum = -1;
+				for (let r = 0;r < fromPlayer.userData.bids.length;r++){
+					if (fromPlayer.userData.bids[r].length == trade.length){
+						tradeResopnseNum = r;
+						break;
+					}
+				}
+				if (tradeResopnseNum >= 0){
+					let tradeResponse = fromPlayer.userData.bids.splice(tradeResopnseNum,1)[0];
+					
+					//print the trades
+					var out = "" + tradeResponse + " from " + fromPlayer.userData.userName + "'s bid array    " + trade + " from " + players[userNumber].userData.userName + "'s matrix";
+					
+					console.log(__line,out);
+					//console.log(__line,'trade',trade);
+					//console.log(__line,'tradeResponse',tradeResponse);
+					
+					
+					//for all cards being traded,
+					for(var i = 0; i< tradeResponse.length; i++){
+						var cardID1 = tradeResponse[i];
+						
+						//destroy invalid bids for player 1 (from player)
+						for(var j = fromPlayer.userData.bids.length-1; j >= 0 ; j--){
+							var bid = fromPlayer.userData.bids[j];
+							for(var k = 0; k<bid.length; k++){
+								if(cardID1 == bid[k]){ // if a bid has a card that is about to be traded, delete the bid
+									fromPlayer.userData.bids.splice(j,1);
+									break;
+								}	
+							}
+						}
+						
+						//destroy invalid bids for player 2 (toPlayer)
+						var cardID2 = trade[i]
+						for(var j = toPlayer.userData.bids.length-1; j >= 0 ; j--){
+							var bid = toPlayer.userData.bids[j];
+							for(var k = 0; k<bid.length; k++){
+								if(cardID2 == bid[k]){ // if a bid has a card that is about to be traded, delete the bid
+									toPlayer.userData.bids.splice(j,1);
+									break;
+								}	
+							}
+						}
+						
+						//destroy all invalid trades in the trade matrix  (could be optimized)
+						
+						for(var l=0; l<players.length; l++){
+							for(var m=0; m<players.length; m++){
+								var tradeArray = playerTradeMatrix[l][m];
+								for(var j = tradeArray.length-1; j >= 0 ; j--){
+									var bid = tradeArray[j];
+									for(var k = 0; k<bid.length; k++){
+										if((cardID1 == bid[k])||(cardID2==bid[k])){ // if a bid has a card that is about to be traded, delete the bid
+											tradeArray.splice(j,1);
+											break;
+										}	
+									}
+								}
+							}
+						}
+					}
+					
+					
+					console.log(__line, "After deleting from trade Matrix");
+					printMatrix();
+					
+					//swap cards in trade
+
+					for (var x = 0;x < tradeResponse.length;x++){
+						//get tile
+						let tileNumber = toPlayer.userData.tiles.indexOf(trade[x]);
+						//store tile
+						let temp = toPlayer.userData.tiles[tileNumber];
+						//swap
+						toPlayer.userData.tiles[tileNumber] = tradeResponse[x];
+						tileNumber = socket.userData.tiles.indexOf(tradeResponse[x]);
+						socket.userData.tiles[tileNumber] = temp;
+					}
+					
+					//send bids to all
+					updateUsers();
+					//send new tiles and trade matrix to users
+					sendTilesToPlayer(socket);
+					sendTilesToPlayer(toPlayer);
+					toPlayer.emit('tradeMatrix',playerTradeMatrix[userNumber]);
+					socket.emit('tradeMatrix',playerTradeMatrix[fromPlayerNumber]);
+					
+					// send trade message to user
+					message(toPlayer,'Traded with '+socket.userData.userName,gameColor);
+					message(socket,'Traded with '+ toPlayer.userData.userName,gameColor);
+				} else {
+					console.log("No valid matching bids !!!!!");
+				}
+			} else {
+				console.log("No trades left in player trade matrix !!!!!!");
+			}
+		} else {
+			console.log("invalid user number !!!!!!!!");
+		}
+	});
+	
+	socket.on('cheakEndOfRound',function(){
+		var add = cheakWin(socket.userData.tiles);
+		console.log(__line,'check end of round for ', socket.userData.userName,socket.userData.tiles);
+		if(add!= 0){
+			newRound(socket,add);
+		}
+	});
 });
+
+function printMatrix(){
+	var pad = 30;
+	var namePad=10; //min 3
+	
+	//first column is names
+	playerList = "1\\2".padStart(namePad);
+	for(var i = 0; i< players.length;i++){
+		playerList += players[i].userData.userName.padStart(pad);	
+	}
+	
+	console.log(playerList);
+	
+	for(var i = 0; i< players.length;i++){
+		//name column
+		var out = "";
+		var name = "" + players[i].userData.userName;
+		out += name.padStart(namePad);
+		
+		
+		for(var j=0; j<playerTradeMatrix[i].length; j++){
+			var arr = "";
+			for(var k=0; k<playerTradeMatrix[i][j].length; k++){
+				arr+='[';
+				arr += playerTradeMatrix[i][j][k];
+				arr += ']'
+			}
+			arr+='|';
+			
+			out += arr.padStart(pad);
+		}
+		console.log(out);
+		
+	}
+}
+
+
+function newRound(socket,add){
+	console.log(__line,'user check',socket !== undefined);
+	if (socket !== undefined){ 
+		message(io.sockets,socket.userData.userName + ' won that round',gameColor);
+		socket.userData.score += add;
+		updateUsers();
+		if (socket.userData.score >= 50){
+			return actilyGameEnd(socket);
+		}
+	}
+	playerTradeMatrix = [];
+	message(io.sockets, "A NEW ROUND HAS STARTED", gameColor);
+	
+	//clear trades and bids
+	players.forEach(function(player){
+		player.userData.trades = [];
+		player.userData.tiles = [];
+		player.userData.bids = [];
+		player.userData.incomingTrades = [];
+		players.forEach(function (p){player.userData.incomingTrades.push(new Array())});
+		playerTradeMatrix.push(player.userData.incomingTrades);
+		
+		player.emit('tradeMatrix',player.userData.incomingTrades);
+	});
+	
+	updateBoard(io.sockets, readyTitleColor, true);
+	console.log(__line,'p',players.length);
+	
+	//deal new cards
+	shared.cardDes.products = shared.cardDes.products.slice(0,players.length);
+	tiles = new Deck( shared.cardDes); //deck to deal to players
+	var pile = new Array(tiles.totalCards);
+	for (var i = 0; i < pile.length; i++){ pile[i]=i;}
+	
+	//print all tiles
+	for (var i = 0; i < pile.length; i++){
+		console.log(__line,'cards',pile[i],tiles.getProperties(pile[i]));
+	}
+	
+	//console.log(__line, "cards", pile) ;
+	//console.log(__line, "cards", tiles);
+	dealAllTiles(players,pile);
+	sendTilesToAllPlayers(players);
+	//console.log(__line, "cards", tiles);
+	//console.log(__line, "allTiles", allTiles);
+	updateUsers();
+}
+
+function cheakWin(tilesToCheak){
+	deck = new Deck( shared.cardDes);
+	cardCount = {};
+	shared.cardDes.products.forEach((i)=>{
+		cardCount[i.name] = {card:i,count:0};
+	});
+	
+	tilesToCheak.forEach((i)=>{
+		var cardProp = deck.getProperties(i);
+		console.log(__line,i,cardProp);
+		if (cardProp.products != undefined){
+			cardCount[cardProp.products.name].count++;
+		}
+	});
+	console.log(__line,'cardCount',cardCount);
+	var add = 0;
+	Object.keys(cardCount).forEach((i)=>{
+		//console.log(__line,cardCount[i]);
+		//console.log(__line,cardCount[i].count);
+		if (cardCount[i].count>=9){
+			//console.log(__line,'should be in there',cardCount[i].card.value);
+			add = cardCount[i].card.value;
+		}
+	});
+	return add;
+}
+
+function checkCardOwner(socket,tileNumbers){
+	try{
+		tileNumbers.forEach((t)=>{
+			//console.log(__line,t);
+			if(socket.userData.tiles.indexOf(t)<0){
+				throw stolenCard;             
+			}
+		});
+		return tileNumbers;
+	}catch(e){
+		if(e == stolenCard){
+			message(socket,e.message,gameErrorColor);
+			console.warn(__line, e.message);
+		}else throw e;
+	}
+	return undefined;
+}
 
 function message(socket, message, color){
 	var messageObj = {
@@ -198,11 +509,22 @@ function updateUsers(target = io.sockets){
 
 function getUserSendData(client){
 	console.log(__line,"userName:", client.userData.userName, " |ready:", client.userData.ready, "|status:", client.userData.statusColor, "|score:", client.userData.score);
+	let bids = [0,0,0,0];
+	client.userData.bids.forEach((b)=>{
+		bids[b.length-1]++;
+	});
+	let trades = [0,0,0,0];
+	client.userData.trades.forEach((b)=>{
+		trades[b.length-1]++;
+	});
 	return{
 		id: client.id,
 		userName: client.userData.userName,
 		color: client.userData.statusColor,
-		score: client.userData.score
+		score: client.userData.score,
+		ready: client.userData.ready,
+		incomingTrades: client.userData.incomingTrades,
+		bids,trades
 	};
 }
 
@@ -229,6 +551,8 @@ function checkStart() {
     }
 }
 
+var playerTradeMatrix = [];
+
 function gameStart() {
 	console.log(__line,"gameStart");
 	message(io.sockets, "THE GAME HAS STARTED", gameColor);
@@ -247,28 +571,10 @@ function gameStart() {
 			client.userData.statusColor = spectatorColor;
 		}
 	});
-	
-	updateBoard(io.sockets, readyTitleColor, true);
-	console.log(__line,'p',players.length);
-	shared.cardDes.products = shared.cardDes.products.slice(0,players.length);
-	tiles = new Deck( shared.cardDes); //deck to deal to players
-	var pile = new Array(tiles.totalCards);
-	for (var i = 0; i < pile.length; i++){ pile[i]=i;}
-	/*for (var i = 0; i < pile.length; i++){
-		var temp = pile[i];//copy tile
-		var randomIndex = Math.floor( Math.random()*pile.length);//pick randomIndex
-		pile[i] = pile[randomIndex];//replace with random tile
-		pile[randomIndex] = temp;//original in random spot
-	}
-	console.log(__line, "cards", pile) ;
-	//console.log(__line, "cards", tiles);
-	*/
-	dealAllTiles(players,pile);
-	sendTilesToAllPlayers(players);
-	//console.log(__line, "cards", tiles);
-	//console.log(__line, "allTiles", allTiles);
+	newRound(undefined,undefined);
 
 	//wait for turn plays
+	io.emit('startGame');
 }
 
 function sendBoardState(){
@@ -327,24 +633,10 @@ function sendTilesToAllPlayers(players){
 function sendTilesToPlayer(player){
 	if (player != undefined){
 		player.emit("tiles", player.userData.tiles);
-		//message(io.sockets, tiles.length + " tiles left", gameColor);
 	}
 }
-/*
-function returnTileToDeck(player, tile, tileDeck) {
-	var tileIndex = player.userData.tiles.indexOf(tile);
-	if (tileIndex >= 0){
-		player.userData.tiles.splice(tileIndex, 1);
-		tileDeck.push(tile);
-		player.emit("tiles", player.userData.tiles);
-		return true;
-	} else{
-		console.log(__line, "tile not found!")
-		player.emit("tiles", player.userData.tiles);
-		return false;
-	}
-}*/
 
+/*
 function playersHaveTiles(){ //to check end conditions
 	var i;
 	var have = false;
@@ -369,8 +661,9 @@ function allSkipped(){
 function checkEnd(){
 	return (!playersHaveTiles() || allSkipped());
 }
+*/
 
-function gameEnd() {
+function actilyGameEnd(winner) {
     console.log(__line,"gameEnd");
     updateBoard(io.sockets, notReadyTitleColor, false);
 
@@ -378,24 +671,26 @@ function gameEnd() {
 	message(io.sockets, "Scores: ", gameColor);
 	let total = 0;
 	for( var i = 0; i < players.length; i += 1){
-		for(var tile = 0; tile < players[i].userData.tiles.length; tile++){
-			players[i].userData.score -= players[i].userData.tiles[tile].number;
-		}
 		message(io.sockets, players[i].userData.userName + ": " + players[i].userData.score + "\n", gameColor);
 		total += players[i].userData.score;
 	}
 	message(io.sockets, "Total score: " + total, gameColor);
 	
+	if(winner != undefined){
+		message(io.sockets,'The winner is ' + winner.userData.userName +'!',gameColor);
+	}
+	io.emit('gameEnd');
+	
     players = [];
 	spectators = [];
     allClients.forEach(function(client) {
+		
         client.userData.ready = false;
         client.userData.statusColor = notReadyColor;
     });
     gameStatus = gameMode.LOBBY;
     updateUsers();
 }
-
 
 //captures stack? to find and return line number
 Object.defineProperty(global, '__stack', {

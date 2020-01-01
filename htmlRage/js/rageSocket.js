@@ -1,7 +1,9 @@
 //socket stuff
 var localAddress = "192.168.1.124";
 
-var socket = io("http://184.167.236.159/"); //try public address
+
+var socket = io("alanisboard.ddns.net"); //try public address
+
 var trylocal = 0;
 socket.on('connect_error',function(error){
 	console.log("I got an error!", error);
@@ -24,9 +26,36 @@ socket.on('reconnect', function(attempt){
 socket.on('connect', function(){
 	//get userName
 	console.log("Connection successful!")
-	var username = prompt('Enter username: ');
-	socket.emit('newUser', username);
+	//var username = prompt('Enter username: ');
+	//socket.emit('newUser', username);
+	
+	if(localStorage.userName === undefined){
+		changeName(socket.id);
+	} else {
+		socket.emit('userName', localStorage.userName);
+	}
+	
+	if(localStorage.id !== undefined){
+		socket.emit('oldId', localStorage.id);
+	}
+	localStorage.id = socket.id;
 });
+
+
+function changeName(userId){
+	if(userId == socket.id){
+		var userName = null;
+		do{
+			userName = prompt('Enter username: ');
+			//console.log(userName);
+			if ((userName == null || userName == "") && localStorage.userName !== undefined){
+				userName = localStorage.userName;
+			}
+		} while (userName === null);
+		localStorage.userName = userName;
+		socket.emit("userName", localStorage.userName);
+	}
+}
 
 /*Initializing the connection with the server via websockets */
 var myCards = [];
@@ -59,7 +88,16 @@ socket.on('userList',function(data){
 	var userListString = '';
 	userList = [];
 	for( var i = 0; i < data.length; i++ ){
-		userListString = userListString + '<div style="color: ' + data[i].color + ';">' + data[i].userName + '</div>';
+		
+		var header = 'div id="userListDiv'+ i + '"';
+		var click = 'onclick="changeName(' + "'" + data[i].id + "'" + ')"';
+		var color = ' style="color: ' + data[i].color + ';"'
+		var string = '' + data[i].userName;
+		var ender = '</div>';
+		
+		userListString = userListString + '<' + header + click + color + '>' + string + ender;
+		
+		//userListString = userListString + '<div style="color: ' + data[i].color + ';">' + data[i].userName + '</div>';
 		//console.log(data[i].userName + ' bid: ' + data[i].bid);
 		if(data[i].color != spectatorColor){
 			userList.push(data[i]);
