@@ -742,7 +742,11 @@ function addHandScoreToTotal(){
 }
 
 function finishRound() {
+//<<<<<<< HEAD
     currentRound -= reduceRoundsBy;
+//=======
+//   currentRound -= 1;
+//>>>>>>> cda67018cf2785cf9527250017692f9ea36f0b00
     if( currentRound > 0) {
         startRound();
     } else {

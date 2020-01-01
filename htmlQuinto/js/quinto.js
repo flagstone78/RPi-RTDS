@@ -3,8 +3,8 @@
 // put chat log behind a button for mobile; only show the last message for a second
 
 //events
-var publicAddress = 'http://localhost:8080/';
-var internalAddress = 'http://localhost:8080/';
+var publicAddress = 'http://184.167.236.159/';
+var internalAddress = 'http://192.168.1.124:8080/';
 
 window.addEventListener('load', function() {
 	var lastTouch = {x:0, y:0};
@@ -333,7 +333,9 @@ class Board {
 
 //socket stuff
 
+
 var socket = io(publicAddress); //try public address //"24.42.206.240" for alabama
+
 var trylocal = 0;
 socket.on('connect_error',function(error){
 	console.log("I got an error!", error);

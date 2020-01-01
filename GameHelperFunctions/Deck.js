@@ -14,6 +14,10 @@ class Deck{
 		this.totalCards = constants.shift() //first number is the total number of cards
 			
 		this.divConstants = constants //CONST
+		this.pile =[]
+		for( let i = 0;i<this.totalCards;i++){this.pile.push(i);}
+		this.shuffle(5)
+	
 	}
 	
 	getProperties(cardNum){

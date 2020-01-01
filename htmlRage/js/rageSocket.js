@@ -1,15 +1,16 @@
 //socket stuff
+var localAddress = "192.168.1.124";
 
-var socket = io("24.96.18.249"); //try public address
+var socket = io("http://184.167.236.159/"); //try public address
 var trylocal = 0;
 socket.on('connect_error',function(error){
 	console.log("I got an error!", error);
 	console.log("socket to:", socket.disconnect().io.uri, "has been closed.");
 	if(!trylocal){ //prevent loops
-		if(window.location.href != 'http://192.168.0.21:8080/'){
-			window.location.replace('http://192.168.0.21:8080/');
+		if(window.location.href != 'http://'+localAddress+':8080/'){
+			window.location.replace('http://'+localAddress+'/');
 		}
-		socket.io.uri = "192.168.0.21:8080";
+		socket.io.uri = localAddress+":8080";
 		console.log("Switching to local url:", socket.io.uri);
 		console.log("Connecting to:",socket.connect().io.uri);
 		trylocal = 1;
