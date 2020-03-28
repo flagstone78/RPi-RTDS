@@ -22,7 +22,7 @@ io = io.listen(server);
 var minPlayers = 2;
 var maxPlayers = 9; //must increase card number for more players
 var numberOfRounds = 10;
-var reduceRoundsBy = 2
+var reduceRoundsBy = 1
 
 var allClients = [];
 var players = [];

@@ -189,7 +189,7 @@ function checkStart() {
                 readyCount++;
             }
         });
-        if(readyCount == allClients.length && readyCount >= minPlayers) {
+        if((readyCount == allClients.length||readyCount == maxPlayers) && readyCount >= minPlayers) {
             gameStart();
         }
     }
