@@ -1,9 +1,109 @@
-var numberOfTilesForHand = 8;
+var numberOfTilesForHand = 4;
+var movemax=1
 
 var blankTile = {owner: "board", number: -1, id: -1};
 function newBlankTile(){
 	return {owner: blankTile.owner, number: blankTile.number, id: blankTile.id};
 }
+class Deck{
+	constructor(cardDesc){
+		this.cardDesc = cardDesc //CONST
+		this.propKeys = Object.keys(this.cardDesc) //CONST
+		
+		let constants = [1]
+		let constant = 1
+		for(let propIndex = this.propKeys.length-1; propIndex >= 0; propIndex--){
+			constant *= this.cardDesc[this.propKeys[propIndex]].length
+			constants.unshift(constant)
+		}
+		
+		this.totalCards = constants.shift() //first number is the total number of cards
+			
+		this.divConstants = constants //CONST
+		//this.owner='Deck'
+		this.pile =[]
+		for( let i = 0;i<this.totalCards;i++){this.pile.push(i);}
+		this.shuffle(5)
+	}
+	
+	getProperties(cardNum){
+		if(cardNum > this.totalCards) return undefined
+		
+		let cardProp = {}
+		
+		for(let propIndex = 0; propIndex < this.propKeys.length; propIndex++){
+			let currentPropertyKey = this.propKeys[propIndex]  //'color'
+			let currentPropertyList = this.cardDesc[currentPropertyKey] //['green','red','blue']
+			
+			//integer divide to get value
+			let valueIndex = Math.floor(cardNum / this.divConstants[propIndex])
+			cardProp[currentPropertyKey] = currentPropertyList[valueIndex]
+			
+			//subtract
+			cardNum -= this.divConstants[propIndex]*valueIndex
+		}
+		
+		return cardProp
+	}
+
+	getWholeDeck(){
+		var wholeDeck=[]
+		for(let cardNum = 0; cardNum < this.totalCards; cardNum++){
+			wholeDeck.push(this.getProperties(cardNum))
+		}
+		return wholeDeck
+	}
+
+	shuffle(n=1){
+		while(n){
+			let m = this.pile.length, i;
+			while(m){
+				i = Math.floor(Math.random() * m--);
+				[this.pile[m],this.pile[i]]=[this.pile[i],this.pile[m]]
+			}
+			n--
+		}
+	}
+	
+	deal(n=1){
+		let hand=[]
+		while(n){
+			if(this.pile.length>0){
+				hand.push(this.pile.pop());n--;
+			}else{
+				//send -1 on end of pile
+				hand.push(-1);n--;
+			}
+		}
+		return hand
+	}
+
+	returncard(cardID){
+		let index=0
+		if(this.pile.length>0){
+			index = Math.floor(Math.random()*this.pile.length)
+			this.pile.spice(index,0,cardID)
+		}else{
+			this.pile.push(cardID)
+		}
+	}
+
+}
+
+/*try/catch to allow use on client and server side
+try {
+	module.exports = Deck
+} catch (err){
+	console.log("you must be client side!")
+} 
+
+//let a = new Deck({suit:['♥','♦','♣','♠'], number:['A',2,3,4,5,6,7,8,9,10,'J','Q','K']}) //MSB->LSB
+
+let c = []
+for(let b = 0; b<52; b++){
+	c.push(a.getProperties(b))
+}
+console.log(c)*/
 
 function checkNeighbors(oldboard,row,col){
 	var isConnected = false
@@ -299,11 +399,81 @@ function boardIsCorrectSize(submittedBoardState, boardState){
 	return correctSize;
 }
 
+function addcord(a,b,neg=1){let c={}
+	let a1=[],b1=[]
+	if(a==0){a1.x=0;a1.y=0}else{a1=a}
+	if(b==0){b1.x=0;b1.y=0}else{b1=b}
+	c.x=a1.x+neg*b1.x
+	c.y=a1.y+neg*b1.y
+	return c
+}
+
+function validMove(movement){
+	//could give half integers and loose the piece
+	let movelen=Math.abs(Math.floor(movement.x))+Math.abs(Math.floor(movement.y))
+	let valid=false
+	if(movelen>0 && movelen<=movemax){valid=true} else {valid=false}
+
+	return valid
+}
+function getcord(boardState,playerID){
+	let cord={}
+	for(let i=0; i<boardState.length; i++){
+		let x=boardState[i].findIndex(ID => ID === playerID)
+		if(x!=-1){
+			cord={x:x,y:i}
+			break
+		}
+	}
+	return cord
+}
+
+
+function parsePath(path){
+	let dmax={
+	dy:0,
+	dx:0,
+	miny:0,
+	maxy:0,
+	minx:0,
+	maxx:0}
+	
+	for(let i = 0; i<path.length; i++){
+		let c = path[i];
+		switch(c){
+			case 'U':
+				dmax.dy -= 1;
+				dmax.miny = Math.min(dmax.miny,dmax.dy);
+			break;
+			case 'R':
+				dmax.dx += 1; 
+				dmax.maxx = Math.max(dmax.maxx,dmax.dx);
+			break;
+			case 'D':
+				dmax.dy += 1; 
+				dmax.maxy = Math.max(dmax.maxy,dmax.dy);
+			break;
+			case 'L':
+				dmax.dx -= 1; 
+				dmax.minx = Math.min(dmax.minx,dmax.dx);
+			break;
+		}
+	}
+
+	return(dmax)
+}
+
+
+
+//validMove: function(movement,boardState,playerID){return validTilesToPlay(playerTiles, submittedBoardState, currentBoardState, numberOfTilesForHand, allTiles)}
 try {
 	module.exports = {
 		numberOfTilesForHand: numberOfTilesForHand,
 		blankTile: blankTile,
-		validTilesToPlay: function(playerTiles, submittedBoardState, currentBoardState, numberOfTilesForHand, allTiles){return validTilesToPlay(playerTiles, submittedBoardState, currentBoardState, numberOfTilesForHand, allTiles)}
+		Deck:Deck,
+		validMove: function(movement){return validMove(movement)},
+		addcord: function(a,b,neg){return addcord(a,b,neg)},
+		parsePath: function(path){return parsePath(path)}
 	}
 } catch (err){
 	console.log("you must be client side!");
