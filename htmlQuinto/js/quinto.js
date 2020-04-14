@@ -3,8 +3,8 @@
 // put chat log behind a button for mobile; only show the last message for a second
 
 //events
-var publicAddress = 'http://184.167.236.159/';
-var internalAddress = 'http://192.168.1.124:8080/';
+var publicAddress = Addresses.publicAddress;
+var internalAddress = Addresses.localAddress;
 
 window.addEventListener('load', function() {
 	var lastTouch = {x:0, y:0};
