@@ -1,15 +1,16 @@
 //socket stuff
-var localAddress = "192.168.1.124";
+//var Addresses=require('./IPconfiguration.js')
+var localAddress = Addresses.localAddress;
 
 
-var socket = io("alanisboard.ddns.net"); //try public address
+var socket = io(Addresses.publicAddress); //try public address
 
 var trylocal = 0;
 socket.on('connect_error',function(error){
 	console.log("I got an error!", error);
 	console.log("socket to:", socket.disconnect().io.uri, "has been closed.");
 	if(!trylocal){ //prevent loops
-		if(window.location.href != 'http://'+localAddress+':8080/'){
+		if(window.location.href != 'http://'+localAddress+'/'){
 			window.location.replace('http://'+localAddress+'/');
 		}
 		socket.io.uri = localAddress+":8080";
