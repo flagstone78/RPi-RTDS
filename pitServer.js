@@ -4,7 +4,7 @@
 //subtract remaining tiles
 
 //TODO: deal cards on game restart
-
+var Addresses=require('./IPconfiguration/IPconfiguration.js')
 var express = require("express");
 var http = require("http");
 var io = require("socket.io");
@@ -14,10 +14,11 @@ var shared = require('./htmlPit/js/shared.js'); //get shared functions
 //const spawn = require("child_process").spawn;
 
 var app = express();
+app.use(express.static("./IPconfiguration"))
 app.use(express.static("./htmlPit")); //working directory
 //Specifying the public folder of the server to make the html accesible using the static middleware
 
-var socket = 8080;
+var socket = 8081;
 //var server = http.createServer(app).listen(8080); //Server listens on the port 8124
 var server = http.createServer(app).listen(socket,"0.0.0.0",511,function(){console.log(__line,"Server connected to socket: "+socket);});//Server listens on the port 8124
 io = io.listen(server);
