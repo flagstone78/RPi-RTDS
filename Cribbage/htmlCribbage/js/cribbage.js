@@ -121,7 +121,7 @@ class game {
 		//console.log('draw: ', clickable );
 		this.ctx.clearRect(0,0,this.ctx.canvas.width, this.ctx.canvas.height);
 		if(gameStatus==2){
-			if(this.tossButton.visible){
+			if((this.tossButton != undefined) && this.tossButton.visible){
 				clickable[0].push(this.tossButton)
 			}
 		}
