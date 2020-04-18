@@ -24,14 +24,14 @@ io = io.listen(server);
 
 
 // DATABASE
-var con = mysql.createConnection({
+var conDB = mysql.createConnection({
   host: "localhost",
   user: "root",
   password: "cherrydragonfruit",
   database: "rage"
 });
 
-con.connect(function(err) {
+conDB.connect(function(err) {
   if (err) throw err;
 });
 
@@ -447,7 +447,7 @@ function gameStart() {
 		}
 		console.log(__line, "game id result: ", gameId);
 	}
-	con.query("SELECT game_id FROM data_per_round ORDER BY game_id DESC, id DESC LIMIT 1", getGameIDCallBack);
+	conDB.query("SELECT game_id FROM data_per_round ORDER BY game_id DESC, id DESC LIMIT 1", getGameIDCallBack);
 
 	
 	
@@ -625,7 +625,7 @@ function checkForAllBids() {
 			//log # bid on # to database
 			console.log(__line, "gameId to send:", gameId);
 			let sql = "INSERT INTO data_per_round (Game_Id, Total_Bid, Hand_Size) VALUES (?, ?, ?)";
-			con.query(sql, [gameId, bidTotal, currentRound], function (err, result) {
+			conDB.query(sql, [gameId, bidTotal, currentRound], function (err, result) {
 				if (err) throw err;
 				console.log("1 record inserted");
 			});
