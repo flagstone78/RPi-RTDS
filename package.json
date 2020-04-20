@@ -7,6 +7,7 @@
     "express": "^4.16.4",
     "jasmine": "^3.5.0",
     "mysql": "^2.18.1",
+    "peer": "^0.5.2",
     "rewire": "^5.0.0",
     "socket.io": "^2.2.0",
     "socket.io-client": "^2.3.0",
