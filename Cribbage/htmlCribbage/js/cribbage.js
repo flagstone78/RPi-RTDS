@@ -220,7 +220,7 @@ socket.on('connect_error',function(error){
 		if(window.location.href != internalAddress){
 			window.location.replace(internalAddress);
 		}
-		socket.io.uri = internalShortAddress;
+		socket.io.uri = internalAddress;
 		console.log("Switching to local url:", socket.io.uri);
 		console.log("Connecting to:",socket.connect().io.uri);
 		trylocal = 1;
