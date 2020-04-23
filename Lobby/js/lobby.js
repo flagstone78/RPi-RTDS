@@ -1,18 +1,25 @@
 
-
-var gameID=0
-var currentGames=['rage:1','cribbage:2']
-function loadgames(){
+function fetchlobbies(){
+	fetch('/lobbies')
+		.then((response)=>{
+			return response.json()
+		}).then((data)=>{
+			loadgames(data)
+		})
+	}
+var dummyID=0
+function loadgames(currentGames){
 	//let ul = document.getElementById("ulMessages");
-	//while(ul.firstChild) ul.removeChild(ul.firstChild);
+	while($("ul")[0].firstChild) $("ul")[0].firstChild.remove();
 	if(currentGames.length==0){
 		$("ul").append("<li> No games are currently avalible </li>")
 	}else{
-		for(game of currentGames){
-			let gameInfo = game.split(':')
-			let type=gameInfo[0]
+		for(let i = currentGames.length-1;i>=0; i--){
+			let game = currentGames[i];
+			//let gameInfo = game.split(':')
+			game.url=''+game.type+''+game.ID
 			let appendString='<li>'+
-								`<div id="title" onclick="send2game('`+game+`')">`+type+'</div>'+
+								`<div id="title" onclick="send2game('${game.url}')"> ${game.type}</div>`+
 								'<div id="subtitle">Click to Start</div>'+
 							'</li>'
 			$("ul").append(appendString)
@@ -33,14 +40,16 @@ function createNewGame(type){
 		send2game(gameID)
 	}
 }
-function send2game(gameID){
+function send2game(game){
 	//console.log('send player to a '+type+' game')
-	console.log('send player to game with id: '+gameID)
+	console.log('send player to: /'+game)
+	location.href = '/'+game
 }
 function createServer(type){
-	gameID++
-	console.log('created server with ID: '+gameID)
+	dummyID++
+	console.log('created server with ID: '+type)
 
-	return type+':'+gameID
+	return type+':'+dummyID
 }
-loadgames()
+fetchlobbies()
+setInterval(fetchlobbies,9000)
