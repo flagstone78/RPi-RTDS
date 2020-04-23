@@ -1,37 +1,15 @@
-const express = require('express');
-const { ExpressPeerServer } = require('peer');
-var cribbageServer=require('./cribbage/cribbageServer.js')
-const app = express();
+const { exec } = require('child_process');
 
-//app.get('/', (req, res, next) => res.send('Hello world!'));
-
-const http = require('http');
-
-const server = http.createServer(app);
-const peerServer = ExpressPeerServer(server, {
-  debug: true,
-  path: '/myapp',
+const ls = exec(`start powershell  "&" node rageServer.js`, function (error, stdout, stderr) {
+  if (error) {
+    console.log(error.stack);
+    console.log('Error code: '+error.code);
+    console.log('Signal received: '+error.signal);
+  }
+  console.log('Child Process STDOUT: '+stdout);
+  console.log('Child Process STDERR: '+stderr);
 });
 
-app.use('/peerjs', peerServer);
-//app.use('/cribbage',express.static("../IPconfiguration"))
-app.use(app.use(express.static("./IPconfiguration")))
-//app.use(express.static("./cribbage"));
-app.use(express.static("./cribbage/htmlCribbage"));
-
-server.listen(8081);
-console.log('server started')
-
-var stdin = process.openStdin();
-stdin.addListener("data", function(d) {
-    // note:  d is an object, and when converted to a string it will
-    // end with a linefeed.  so we (rather crudely) account for that  
-    // with toString() and then trim() 
-	var input = d.toString().trim();
-    console.log('you entered: [' + input + ']');
-	try{
-		eval("console.log("+input+")");
-	} catch (err) {
-		console.log("invalid command");
-	}
-  });
+ls.on('exit', function (code) {
+  console.log('Child process exited with exit code '+code);
+});
