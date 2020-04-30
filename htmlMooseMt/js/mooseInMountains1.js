@@ -83,7 +83,7 @@ $('#myText')[0].addEventListener('keyup',function(event){
 	  		if(Qengine.strContain(message,'{')){
                 let first=message.indexOf('{')
                 let last=message.indexOf('}')+1
-                if (last==-1) {
+                if (last==0) {
                 	console.log('error');
                 	let error = 'did not include"}"'
                 	$('#chatlog').append('<div style="color:#ff0000">'+error+'</div>'); //appending the data on the page using Jquery 
@@ -91,7 +91,7 @@ $('#myText')[0].addEventListener('keyup',function(event){
                 	let testcord={}
                 	try{
                 		testcord=JSON.parse(message.substr(first,last))
-                		Qengine.mooseReset=testcord
+                		Qengine.mooseReset(testcord)
                 		let tested='moose='+message.substr(first,last)
                 		$('#chatlog').append('<div style="color:#009900">'+tested+'</div>'); //appending the data on the page using Jquery 
                 		moosecordget=false
