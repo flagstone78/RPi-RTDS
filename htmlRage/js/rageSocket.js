@@ -13,7 +13,7 @@ socket.on('connect_error',function(error){
 		if(window.location.href != 'http://'+localAddress+'/'){
 			window.location.replace('http://'+localAddress+'/');
 		}
-		socket.io.uri = localAddress+":8080";
+		socket.io.uri = localAddress;
 		console.log("Switching to local url:", socket.io.uri);
 		console.log("Connecting to:",socket.connect().io.uri);
 		trylocal = 1;
