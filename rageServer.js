@@ -3,7 +3,7 @@
 // crown over the leader
 // fix the board stretching
 // make the code more object oriented
-var Addresses=require('./IPconfiguration/IPconfiguration.js')
+
 var express = require("express");
 var http = require("http");
 var io = require("socket.io");
@@ -12,11 +12,10 @@ var mysql = require('mysql');
 //const spawn = require("child_process").spawn;
 
 var app = express();
-app.use(express.static("./IPconfiguration"))
 app.use(express.static("./htmlRage")); //working directory
 //Specifying the public folder of the server to make the html accesible using the static middleware
 
-var socket = Addresses.socket;
+var socket = 8080;
 //var server = http.createServer(app).listen(8080); //Server listens on the port 8124
 var server = http.createServer(app).listen(socket,"0.0.0.0",511,function(){console.log(__line,"Server connected to socket: "+socket);});//Server listens on the port 8124
 io = io.listen(server);
@@ -24,15 +23,18 @@ io = io.listen(server);
 
 
 // DATABASE
-var conDB = mysql.createConnection({
+var con = mysql.createConnection({
   host: "localhost",
   user: "root",
-  password: "cherrydragonfruit",
+  password: "",
   database: "rage"
 });
 
-conDB.connect(function(err) {
-  if (err) throw err;
+var useDatabase = true;
+con.connect(function(err) {
+  //if (err) throw err;
+  console.warn("Error connecting to MYSQL server. Scores will not be recorded");
+  useDatabase = false;
 });
 
 var gameId = -1; //game id for database
@@ -43,7 +45,6 @@ var gameId = -1; //game id for database
 var minPlayers = 2;
 var maxPlayers = 9; //must increase card number for more players
 var numberOfRounds = 10;
-var reduceRoundsBy = 1
 
 var allClients = [];
 var players = [];
@@ -436,18 +437,21 @@ function checkStart() {
 }
 
 function gameStart() {
-	//get new game id
-	function getGameIDCallBack(err, result, fields) {
-		console.log(__line,"aaaaaaaaaaaaaaaaa", err, result);
-		if (err) throw err;
-		if (result.length < 1){
-			gameId = 0;
-		} else {
-			gameId = result[0].game_id+1;
+	if(useDatabase){
+		//get new game id
+		function getGameIDCallBack(err, result, fields) {
+			console.log(__line,"aaaaaaaaaaaaaaaaa", err, result);
+			if (err) throw err;
+			if (result.length < 1){
+				gameId = 0;
+			} else {
+				gameId = result[0].game_id+1;
+			}
+			//console.log(__line, "game id result: ", gameId);
 		}
-		console.log(__line, "game id result: ", gameId);
+	
+		con.query("SELECT game_id FROM data_per_round ORDER BY game_id DESC, id DESC LIMIT 1", getGameIDCallBack);
 	}
-	conDB.query("SELECT game_id FROM data_per_round ORDER BY game_id DESC, id DESC LIMIT 1", getGameIDCallBack);
 
 	
 	
@@ -622,13 +626,15 @@ function checkForAllBids() {
 				player.emit('playerLeadsRound', false); //turn off 'you lead' sign
 			});
 			
-			//log # bid on # to database
-			console.log(__line, "gameId to send:", gameId);
-			let sql = "INSERT INTO data_per_round (Game_Id, Total_Bid, Hand_Size) VALUES (?, ?, ?)";
-			conDB.query(sql, [gameId, bidTotal, currentRound], function (err, result) {
-				if (err) throw err;
-				console.log("1 record inserted");
-			});
+			if(useDatabase){
+				//log # bid on # to database
+				console.log(__line, "gameId to send:", gameId);
+				let sql = "INSERT INTO data_per_round (Game_Id, Total_Bid, Hand_Size) VALUES (?, ?, ?)";
+				con.query(sql, [gameId, bidTotal, currentRound], function (err, result) {
+					if (err) throw err;
+					console.log("1 record inserted");
+				});
+			}
 			
 			
 			message( io.sockets, bidTotal + " bid on " + currentRound, gameColor);
@@ -838,11 +844,7 @@ function addHandScoreToTotal(){
 }
 
 function finishRound() {
-//<<<<<<< HEAD
-    currentRound -= reduceRoundsBy;
-//=======
-//   currentRound -= 1;
-//>>>>>>> cda67018cf2785cf9527250017692f9ea36f0b00
+    currentRound -= 1;
     if( currentRound > 0) {
         startRound();
     } else {

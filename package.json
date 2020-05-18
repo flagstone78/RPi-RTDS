@@ -1,5 +1,9 @@
 {
+<<<<<<< HEAD
   "name": "rpi-rtds",
+=======
+  "name": "RPi-RTDS",
+>>>>>>> upstream/master
   "version": "0.0.2",
   "description": "Raspberry pi realtime data server based on node.js express and socket.io.",
   "main": "cribbageServer.js",
@@ -8,10 +12,14 @@
     "jasmine": "^3.5.0",
     "mysql": "^2.18.1",
     "peer": "^0.5.2",
+<<<<<<< HEAD
     "rewire": "^5.0.0",
     "socket.io": "^2.2.0",
     "socket.io-client": "^2.3.0",
     "socketio": "^1.0.0"
+=======
+    "socket.io": "^2.2.0"
+>>>>>>> upstream/master
   },
   "devDependencies": {},
   "scripts": {
@@ -19,7 +27,11 @@
   },
   "repository": {
     "type": "git",
+<<<<<<< HEAD
     "url": "git+https://github.com/spencermathias/RPi-RTDS.git"
+=======
+    "url": "git+https://github.com/flagstone78/RPi-RTDS.git"
+>>>>>>> upstream/master
   },
   "author": "Alan Mathias",
   "license": "ISC",
