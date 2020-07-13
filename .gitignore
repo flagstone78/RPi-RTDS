@@ -1,3 +1,6 @@
 
 mysqltestServer.js
 node_modules/
+mysqlConfig/databaseLogin.py
+mysqlConfig/databaseLogin.js
+*.pyc

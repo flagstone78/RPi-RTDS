@@ -45,6 +45,7 @@ var gameId = -1; //game id for database
 var minPlayers = 2;
 var maxPlayers = 9; //must increase card number for more players
 var numberOfRounds = 10;
+var reduceRoundsBy=1;
 
 var allClients = [];
 var players = [];
@@ -844,7 +845,7 @@ function addHandScoreToTotal(){
 }
 
 function finishRound() {
-    currentRound -= 1;
+        currentRound -= reduceRoundsBy;
     if( currentRound > 0) {
         startRound();
     } else {

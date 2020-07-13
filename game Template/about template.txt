@@ -1,0 +1,9 @@
+when using this template change names
+nameOfGame
+clientside
+emptyServer
+if node_modules is not in your outermost folder place it there.
+change name of game in index document
+you may change the icon to somthing that is more apropriate to your game
+add functionality to the server by adding code to the file that was renamed from emptyServer
+add functionality to the clientside(all the drawing and calculations done by the browser) by adding code to the file that was renamed from clientside.js
