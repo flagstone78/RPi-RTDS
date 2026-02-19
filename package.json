@@ -5,7 +5,7 @@
   "main": "cribbageServer.js",
   "dependencies": {
     "express": "^4.19.2",
-    "jasmine": "^3.5.0",
+    "jasmine": "^3.6.1",
     "mysql": "^2.18.1",
     "peer": "^0.5.2",
     "socket.io": "^2.5.0"
